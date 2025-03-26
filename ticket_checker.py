@@ -2,16 +2,15 @@ import os
 import requests
 from twilio.rest import Client
 from dotenv import load_dotenv
-import schedule
-import time
 import logging
+import time
 
+# Configure logging
 logging.basicConfig(
     level=logging.INFO, 
     format='%(asctime)s - %(levelname)s: %(message)s',
     handlers=[
-        logging.FileHandler('ticket_checker.log'),
-        logging.StreamHandler()
+        logging.StreamHandler()  
     ]
 )
 
@@ -20,15 +19,8 @@ load_dotenv()
 def check_url_exists(url):
     """
     Comprehensively check URL accessibility with detailed error reporting.
-    
-    Args:
-        url (str): The URL to check
-    
-    Returns:
-        dict: A dictionary containing check results
     """
     try:
-        
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -45,29 +37,11 @@ def check_url_exists(url):
             'is_accessible': response.status_code in accessible_codes
         }
     
-    except requests.exceptions.ConnectionError:
-        logging.error("Connection Error: Unable to connect to the server.")
+    except Exception as e:
+        logging.error(f"URL Check Error: {str(e)}")
         return {
             'exists': False,
-            'error': 'Connection Error',
-            'details': 'Unable to connect to the server. Check network or URL.',
-            'is_accessible': False
-        }
-    
-    except requests.exceptions.Timeout:
-        logging.error("Timeout Error: The request timed out.")
-        return {
-            'exists': False,
-            'error': 'Timeout Error',
-            'details': 'The request timed out. The server might be slow or unreachable.',
-            'is_accessible': False
-        }
-    
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Request Exception: {str(e)}")
-        return {
-            'exists': False,
-            'error': 'Request Exception',
+            'error': 'Check Failed',
             'details': str(e),
             'is_accessible': False
         }
@@ -75,19 +49,17 @@ def check_url_exists(url):
 def send_whatsapp_message(url):
     """
     Send a WhatsApp message using Twilio when the URL is found.
-    
-    Args:
-        url (str): The URL of the ticket
     """
     try:
-        
+    
         account_sid = os.getenv('TWILIO_ACCOUNT_SID')
         auth_token = os.getenv('TWILIO_AUTH_TOKEN')
         twilio_whatsapp_number = os.getenv('TWILIO_WHATSAPP_NUMBER', 'whatsapp:+14155238886')
         recipient_number = os.getenv('RECIPIENT_WHATSAPP_NUMBER')
         
+    
         if not all([account_sid, auth_token, recipient_number]):
-            logging.error("Missing Twilio credentials. Check your .env file.")
+            logging.error("Missing Twilio credentials.")
             return
         
         client = Client(account_sid, auth_token)
@@ -103,30 +75,41 @@ def send_whatsapp_message(url):
     except Exception as e:
         logging.error(f"Failed to send WhatsApp message: {str(e)}")
 
-def check_and_notify():
+def main():
     """
-    Main function to check URL and send notification if available.
+    Main function to continuously check URL and send notification.
+    Adapted for Railway's always-on environment.
     """
+
     url = os.getenv('TARGET_URL', 'https://in.bookmyshow.com/sports/lucknow-super-giants-vs-chennai-super-kings/ET00434751')
     
-    logging.info(f"Checking URL: {url}")
     
-    check_result = check_url_exists(url)
-    logging.info("URL Check Results:")
-    for key, value in check_result.items():
-        logging.info(f"{key.replace('_', ' ').title()}: {value}")
+    check_interval = int(os.getenv('CHECK_INTERVAL', 600))
     
-    if check_result['is_accessible']:
-        send_whatsapp_message(url)
-
-def main():
-    schedule.every(10).minutes.do(check_and_notify)
-    
-    logging.info("Ticket Checker started. Checking every 10 minutes.")
+    logging.info(f"Ticket Checker Started. Checking URL: {url}")
+    logging.info(f"Check Interval: {check_interval} seconds")
     
     while True:
-        schedule.run_pending()
-        time.sleep(1)
+        try:
+            logging.info("Performing URL check...")
+            check_result = check_url_exists(url)
+            
+            
+            logging.info("URL Check Results:")
+            for key, value in check_result.items():
+                logging.info(f"{key.replace('_', ' ').title()}: {value}")
+            
+            
+            if check_result['is_accessible']:
+                send_whatsapp_message(url)
+            
+            
+            time.sleep(check_interval)
+        
+        except Exception as e:
+            logging.error(f"Unexpected error in main loop: {str(e)}")
+            
+            time.sleep(check_interval)
 
 if __name__ == '__main__':
     main()
