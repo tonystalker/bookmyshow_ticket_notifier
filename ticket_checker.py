@@ -81,7 +81,7 @@ def main():
     Adapted for Railway's always-on environment.
     """
 
-    url = os.getenv('TARGET_URL', 'https://in.bookmyshow.com/sports/lucknow-super-giants-vs-chennai-super-kings/ET00434751')
+    url = "https://in.bookmyshow.com/sports/lucknow-super-giants-vs-mumbai-indians/ET00434749"
     
     
     check_interval = int(os.getenv('CHECK_INTERVAL', 600))
