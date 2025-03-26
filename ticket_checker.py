@@ -84,7 +84,7 @@ def main():
     url = os.getenv('TARGET_URL', 'https://in.bookmyshow.com/sports/lucknow-super-giants-vs-chennai-super-kings/ET00434751')
     
     
-    check_interval = int(os.getenv('CHECK_INTERVAL', 600))
+    check_interval = int(os.getenv('CHECK_INTERVAL', 3600))
     
     logging.info(f"Ticket Checker Started. Checking URL: {url}")
     logging.info(f"Check Interval: {check_interval} seconds")
